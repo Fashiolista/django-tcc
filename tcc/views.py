@@ -98,6 +98,10 @@ def post(request):
             object_pk=data.get('object_pk'),
         )
 
+@login_required
+def post_form(request):
+    return render_to_response('_tag_friend_form.html', {'form': _get_comment_form(request.GET['content_type_id'], request.GET['object_pk'], data=None, initial=None)})
+    
 
 @login_required
 @require_POST

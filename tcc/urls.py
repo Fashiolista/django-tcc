@@ -8,6 +8,7 @@ urlpatterns = patterns(
     url(r'^replies/(?P<parent_id>\d+)/$', 'replies', name='tcc_replies'),
     url(r'^thread/(?P<thread_id>\d+)/$', 'thread', name='tcc_thread'),
     url(r'^post/$', 'post', name='tcc_post'),
+    url(r'^post_form/$', 'post_form', name='tcc_post_form'),
     url(r'^remove/(?P<comment_id>\d+)/$', 'remove', name='tcc_remove'),
     url(r'^spam/(?P<comment_id>\d+)/$', 'spam', name='tcc_spam'),
     url(r'^restore/(?P<comment_id>\d+)/$', 'restore', name='tcc_restore'),
