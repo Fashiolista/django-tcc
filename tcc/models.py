@@ -19,6 +19,7 @@ from tcc import utils
 from tcc import settings as tcc_settings
 from django.utils.safestring import mark_safe
 from akismet import Akismet
+import re
 
 SITE_ID = getattr(settings, 'SITE_ID', 1)
 
@@ -135,6 +136,82 @@ class Comment(models.Model):
     limited = managers.LimitedCurrentCommentManager()
     removed = managers.RemovedCommentManager()
     disapproved = managers.DisapprovedCommentManager()
+    
+    @property
+    def comment_facebook(self):
+        '''
+        Returns the comment formated for facebook
+        
+        Basically changing the user references to something like
+        Hey @[thijs.goos], check out this item
+        
+        '''
+        at_fb_user_pattern = re.compile('@(?P<username>[\w_-]+):(?P<fb_id>\d+)', re.IGNORECASE)
+        replaced = at_fb_user_pattern.sub('@[\g<fb_id>]', self.comment_raw)
+        return replaced
+
+    @property
+    def has_facebook_mentions(self):
+        '''
+        Returns the comment formated for facebook
+        
+        Basically changing the user references to something like
+        Hey @[thijs.goos], check out this item
+        
+        '''
+        at_fb_user_pattern = re.compile('@(?P<username>[\w_-]+):(?P<fb_id>\d+)', re.IGNORECASE)
+        raw_comment = self.comment_raw
+        groups = at_fb_user_pattern.findall(raw_comment)
+        facebook_mentions = bool(groups)
+        return facebook_mentions
+
+    def share_to_facebook(self, graph=None, facebook_id=None):
+        '''
+        Share the comment to Facebook. This should be called from a task
+        
+        We only know how to share comments on profiles and entities
+        '''
+        from django.contrib.contenttypes.models import ContentType
+        from django_facebook.models import OpenGraphShare
+        from entity import models as entity_models
+        from user import models as user_models
+        
+        if not isinstance(self.content_object, (entity_models.Entity, user_models.Profile)):
+            return
+        
+        # prepare to share to facebook
+        message = self.comment_facebook
+        
+        url_format = '%s%s?og=active&utm_campaign=facebook_action_comment&utm_medium=facebook&utm_source=facebook'
+        content_object_url = url_format % (settings.PRODUCTION_URL, unicode(self.content_object.url))
+        kwargs = dict(
+            # the comment to post
+            message=message,
+            # get more exposure by marking it as explicitly shared
+            fb__explicitly_shared=True,
+        )
+        # the url of the item
+        if isinstance(self.content_object, entity_models.Entity):
+            kwargs['item'] = content_object_url
+        elif isinstance(self.content_object, user_models.Profile):
+            kwargs['fashiolista'] = content_object_url
+            
+        kwargs['ref'] = 'default__%s' % self.user_id
+        comment_content_type = ContentType.objects.get(app_label='tcc', model='comment')
+        share = OpenGraphShare.objects.create(
+            user_id=self.user_id,
+            action_domain='fashiolista:comment',
+            content_type=comment_content_type,
+            object_id=self.id,
+        )
+        # write the facebook id if we have it
+        if facebook_id:
+            share.facebook_user_id = facebook_id
+        share.set_share_dict(kwargs)
+        share.save()
+        result = share.send()
+
+        return result
 
     class Meta:
         ordering = ['sort_date']

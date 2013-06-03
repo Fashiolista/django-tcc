@@ -71,11 +71,18 @@ def thread(request, thread_id):
 @require_POST
 def post(request):
     data = request.POST.copy()
-  # inject the user and IP
+    # inject the user and IP
     data['user'] = request.user.id
     form = forms.CommentForm(data, ip=request.META['REMOTE_ADDR'])
     if form.is_valid():
         comment = form.save()
+        # send the comment to Facebook if applicable
+        if comment.has_facebook_mentions:
+            from open_facebook.api import OpenFacebook
+            access_token = request.POST.get('access_token')
+            facebook_id = request.POST.get('facebook_id')
+            graph = OpenFacebook(access_token)
+            comment.share_to_facebook(graph, facebook_id)
         if comment:
             if request.is_ajax():
                 context = RequestContext(request, {'c': comment})
