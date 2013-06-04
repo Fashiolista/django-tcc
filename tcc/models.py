@@ -175,26 +175,37 @@ class Comment(models.Model):
         from django_facebook.models import OpenGraphShare
         from entity import models as entity_models
         from user import models as user_models
+        from django.contrib.auth.models import User
+        from lists.models import UserList
         
-        if not isinstance(self.content_object, (entity_models.Entity, user_models.Profile)):
+        if not isinstance(self.content_object, (entity_models.Entity, User, UserList)):
             return
         
         # prepare to share to facebook
         message = self.comment_facebook
         
-        url_format = '%s%s?og=active&utm_campaign=facebook_action_comment&utm_medium=facebook&utm_source=facebook'
-        content_object_url = url_format % (settings.PRODUCTION_URL, unicode(self.content_object.url))
+        analytics_tracking = 'og=active&utm_campaign=facebook_action_comment&utm_medium=facebook&utm_source=facebook'
+        
         kwargs = dict(
             # the comment to post
             message=message,
             # get more exposure by marking it as explicitly shared
             fb__explicitly_shared=True,
         )
+        
+        def track_url(url):
+            return '%s%s?%s' % (settings.PRODUCTION_URL, url, analytics_tracking)
+        
         # the url of the item
         if isinstance(self.content_object, entity_models.Entity):
+            content_object_url = track_url(unicode(self.content_object.url))
             kwargs['item'] = content_object_url
-        elif isinstance(self.content_object, user_models.Profile):
+        elif isinstance(self.content_object, user_models.User):
+            content_object_url = track_url(unicode(self.content_object.get_profile().url))
             kwargs['fashiolista'] = content_object_url
+        elif isinstance(self.content_object, UserList):
+            content_object_url = track_url(unicode(self.content_object.url['public']))
+            kwargs['list'] = content_object_url
             
         kwargs['ref'] = 'default__%s' % self.user_id
         comment_content_type = ContentType.objects.get(app_label='tcc', model='comment')
