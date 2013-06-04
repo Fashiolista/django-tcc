@@ -146,7 +146,7 @@ class Comment(models.Model):
         Hey @[thijs.goos], check out this item
         
         '''
-        at_fb_user_pattern = re.compile('@(?P<username>[\w_-]+):(?P<fb_id>\d+)', re.IGNORECASE)
+        at_fb_user_pattern = re.compile('@(?P<username>[\w_-]+):(?P<fb_id>\d+)', re.IGNORECASE | re.UNICODE)
         replaced = at_fb_user_pattern.sub('@[\g<fb_id>]', self.comment_raw)
         return replaced
 
@@ -159,7 +159,7 @@ class Comment(models.Model):
         Hey @[thijs.goos], check out this item
         
         '''
-        at_fb_user_pattern = re.compile('@(?P<username>[\w_-]+):(?P<fb_id>\d+)', re.IGNORECASE)
+        at_fb_user_pattern = re.compile('@(?P<username>[\w_-]+):(?P<fb_id>\d+)', re.IGNORECASE | re.UNICODE)
         raw_comment = self.comment_raw
         groups = at_fb_user_pattern.findall(raw_comment)
         facebook_mentions = bool(groups)
