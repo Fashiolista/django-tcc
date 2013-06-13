@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -26,7 +25,7 @@ TWO_MINS = timedelta(minutes=2)
 
 
 class Subscription(models.Model):
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     comment = models.ForeignKey('Comment')
     read_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
@@ -76,7 +75,7 @@ class Comment(models.Model):
   # The actual comment fields
     parent = models.ForeignKey('self', verbose_name=_('Reply to'), null=True,
         blank=True, related_name='children')
-    user = models.ForeignKey(User, verbose_name='Commenter')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='Commenter')
 
   # These are here mainly for backwards compatibility
     ip_address = models.IPAddressField()
@@ -115,10 +114,10 @@ class Comment(models.Model):
         null=True)
 
     # subscription (for notification)
-    unsubscribers = models.ManyToManyField(User,
+    unsubscribers = models.ManyToManyField(settings.AUTH_USER_MODEL,
         related_name='thread_unsubscribers')
     subscribers = models.ManyToManyField(
-        User,
+        settings.AUTH_USER_MODEL,
         through=Subscription,
         related_name='comment_subscriptions',
     )
@@ -490,7 +489,7 @@ class Comment(models.Model):
 
 class SpamReport(models.Model):
     comment = models.ForeignKey(Comment)
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
 
     class Meta:
         unique_together = ['user', 'comment']
